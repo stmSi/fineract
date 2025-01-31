@@ -50,6 +50,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.ToString;
@@ -62,6 +63,7 @@ import org.apache.fineract.client.models.BusinessDateRequest;
 import org.apache.fineract.client.models.GetJournalEntriesTransactionIdResponse;
 import org.apache.fineract.client.models.GetLoansLoanIdRepaymentPeriod;
 import org.apache.fineract.client.models.GetLoansLoanIdResponse;
+import org.apache.fineract.client.models.GetLoansLoanIdStatus;
 import org.apache.fineract.client.models.GetLoansLoanIdTransactions;
 import org.apache.fineract.client.models.JournalEntryTransactionItem;
 import org.apache.fineract.client.models.PaymentAllocationOrder;
@@ -159,6 +161,7 @@ public abstract class BaseLoanIntegrationTest {
     protected BusinessDateHelper businessDateHelper = new BusinessDateHelper();
     protected DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DATETIME_PATTERN);
     protected GlobalConfigurationHelper globalConfigurationHelper = new GlobalConfigurationHelper();
+    protected final CodeHelper codeHelper = new CodeHelper();
 
     protected static void validateRepaymentPeriod(GetLoansLoanIdResponse loanDetails, Integer index, LocalDate dueDate, double principalDue,
             double principalPaid, double principalOutstanding, double paidInAdvance, double paidLate) {
@@ -235,6 +238,32 @@ public abstract class BaseLoanIntegrationTest {
         assertEquals(interestOutstanding, period.getInterestOutstanding());
         assertEquals(paidInAdvance, period.getTotalPaidInAdvanceForPeriod());
         assertEquals(paidLate, period.getTotalPaidLateForPeriod());
+    }
+
+    /**
+     * Verifies the loan status by applying the given extractor function to the status of the loan details. This method
+     * ensures that the loan details, loan status, and the result of the extractor are not null and asserts that the
+     * result of the extractor function is true.
+     *
+     * @param loanDetails
+     *            the loan details object containing the loan status
+     * @param extractor
+     *            a function that extracts a boolean value from the loan status for verification
+     * @throws AssertionError
+     *             if any of the following conditions are not met:
+     *             <ul>
+     *             <li>The loan details object is not null</li>
+     *             <li>The loan status in the loan details is not null</li>
+     *             <li>The value extracted by the extractor function is not null</li>
+     *             <li>The value extracted by the extractor function is true</li>
+     *             </ul>
+     */
+    protected void verifyLoanStatus(GetLoansLoanIdResponse loanDetails, Function<GetLoansLoanIdStatus, Boolean> extractor) {
+        Assertions.assertNotNull(loanDetails);
+        Assertions.assertNotNull(loanDetails.getStatus());
+        Boolean actualValue = extractor.apply(loanDetails.getStatus());
+        Assertions.assertNotNull(actualValue);
+        Assertions.assertTrue(actualValue);
     }
 
     private String getNonByPassUserAuthKey(RequestSpecification requestSpec, ResponseSpecification responseSpec) {
@@ -1072,6 +1101,15 @@ public abstract class BaseLoanIntegrationTest {
     protected Installment installment(double principalAmount, double interestAmount, double totalOutstandingAmount, Boolean completed,
             String dueDate) {
         return new Installment(principalAmount, interestAmount, null, null, totalOutstandingAmount, completed, dueDate, null, null);
+    }
+
+    protected Installment fullyRepaidInstallment(double principalAmount, double interestAmount, String dueDate) {
+        return new Installment(principalAmount, interestAmount, null, null, 0.0, true, dueDate, null, null);
+    }
+
+    protected Installment unpaidInstallment(double principalAmount, double interestAmount, String dueDate) {
+        Double amount = principalAmount + interestAmount;
+        return new Installment(principalAmount, interestAmount, null, null, amount, false, dueDate, null, null);
     }
 
     protected Installment installment(double principalAmount, double interestAmount, double feeAmount, double totalOutstandingAmount,

@@ -37,6 +37,7 @@ import org.apache.fineract.accounting.journalentry.data.LoanTransactionDTO;
 import org.apache.fineract.accounting.producttoaccountmapping.domain.ProductToGLAccountMapping;
 import org.apache.fineract.infrastructure.core.service.MathUtil;
 import org.apache.fineract.organisation.office.domain.Office;
+import org.apache.fineract.portfolio.PortfolioProductType;
 import org.apache.fineract.portfolio.loanaccount.data.LoanTransactionEnumData;
 import org.springframework.stereotype.Component;
 
@@ -230,9 +231,11 @@ public class AccrualBasedAccountingProcessorForLoan implements AccountingProcess
         GLAccountBalanceHolder glAccountBalanceHolder = new GLAccountBalanceHolder();
 
         // need to fetch if there are account mappings (always one)
-        Integer chargeOffReasonCodeValue = loanDTO.getChargeOffReasonCodeValue();
+        Long chargeOffReasonCodeValue = loanDTO.getChargeOffReasonCodeValue();
 
-        ProductToGLAccountMapping mapping = helper.getChargeOffMappingByCodeValue(chargeOffReasonCodeValue);
+        ProductToGLAccountMapping mapping = chargeOffReasonCodeValue != null
+                ? helper.getChargeOffMappingByCodeValue(loanProductId, PortfolioProductType.LOAN, chargeOffReasonCodeValue)
+                : null;
         if (mapping != null) {
             GLAccount accountCredit = this.helper.getLinkedGLAccountForLoanProduct(loanProductId,
                     AccrualAccountsForLoan.LOAN_PORTFOLIO.getValue(), paymentTypeId);
